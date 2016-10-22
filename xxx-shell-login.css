@@ -1,0 +1,129 @@
+body {
+	background:#000 url(http://imageshack.com/a/img923/5931/8LrEBB.jpg);
+	background-position: center;
+	background-size:100%;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	color:#fff;
+	padding:30px;
+}
+.xxx-hacker-login {
+	background:#000 url(http://imageshack.com/a/img923/3091/5x3KJk.jpg);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	border:2px solid green;
+	width:700;
+	font-size:26;
+	border-radius: 50px;
+		-moz-border-radius: 50px;
+		-webkit-border-radius: 50px;
+	box-shadow: 0 0 30px lime;
+		-moz-box-shadow: 0 0 30px lime;
+		-webkit-box-shadow: 0 0 30px lime; 
+		-o-box-shadow: 0 0 30px lime; 
+		-ms-box-shadow: 0 0 30px lime;
+}
+.arie-login {
+	background:#000;
+	border:2px solid green;
+	width:700;
+	position:fixed; left:350px; top:100;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	opacity:0.7;
+	font-size:26;
+	border-radius: 50px;
+		-moz-border-radius: 50px;
+		-webkit-border-radius: 50px;
+	box-shadow: 0 0 30px lime;
+		-moz-box-shadow: 0 0 30px lime;
+		-webkit-box-shadow: 0 0 30px lime; 
+		-o-box-shadow: 0 0 30px lime; 
+		-ms-box-shadow: 0 0 30px lime;
+}
+.arie-login:hover {
+	width:700;
+	position:fixed; left:350px; top:100;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
+	opacity:0.9;
+	border:2px solid #0FFFF0; font-size:30;
+	border-radius: 10px;
+		-moz-border-radius: 50px;
+		-webkit-border-radius: 50px;
+	box-shadow: 0 0 30px white;
+		-moz-box-shadow: 0 0 30px #0FFFF0;
+		-webkit-box-shadow: 0 0 30px #0FFFF0; 
+		-o-box-shadow: 0 0 30px #0FFFF0; 
+		-ms-box-shadow: 0 0 30px #0FFFF0;
+}
+input.login{
+	background-color:#222;
+	color:white;
+	padding:15px 30px 15px 30px;
+	border:1px solid lime;
+	border-radius: 50px;
+		-moz-border-radius: 50px;
+		-webkit-border-radius: 50px;
+	box-shadow: 0 0 30px lime;
+		-moz-box-shadow: 0 0 30px lime;
+		-webkit-box-shadow: 0 0 30px lime; 
+		-o-box-shadow: 0 0 30px lime; 
+		-ms-box-shadow: 0 0 30px lime;
+}
+input.login:hover{
+	background:#000;
+	color: #0FFFF0;
+	font-size:24;
+	padding:10px 30px 10px 30px;
+	border:1px solid #444;
+	border-radius: 50px;
+		-moz-border-radius: 50px;
+		-webkit-border-radius: 50px;
+	box-shadow: 0 0 30px yellow;
+		-moz-box-shadow: 0 0 30px #0FFFF0;
+		-webkit-box-shadow: 0 0 30px #0FFFF0; 
+		-o-box-shadow: 0 0 30px #0FFFF0; 
+		-ms-box-shadow: 0 0 30px #0FFFF0;
+}
+.sembunyi {
+	background:transparent;
+	width:50;
+	border:none;
+	position:fixed;
+	left:5px;
+	bottom:1;
+}
+input.gondrong{
+	background:transparent;
+	color:black;
+	padding:1px;
+	border:none;
+	border-radius: 1px;
+		-moz-border-radius: 1px;
+		-webkit-border-radius: 1px;
+	box-shadow: red;
+		-moz-box-shadow: 0 0 30px transparent;
+		-webkit-box-shadow: 0 0 30px transparent; 
+		-o-box-shadow: 0 0 30px transparent; 
+		-ms-box-shadow: 0 0 30px transparent;
+}
+input.gondrong:hover{
+	color: #FF0000;
+	font-size:20;
+	padding:5px;
+}
+h1 {
+	font-family: Chiller;
+}
+a {
+	text-decoration: none;
+	color:lime;
+}
+a:visited {
+	color:red;
+}
+a:hover {
+	color:white;
+}
