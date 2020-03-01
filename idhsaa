@@ -1,0 +1,856 @@
+<?php
+// detect browser info
+$user_agent = http_user_agent();
+$browser_name = $user_agent['name'];
+$browser_version = $user_agent['version'];
+$browser_version_array = explode('.', $browser_version);
+
+// retrieve visitor type cookie, if exists
+if ($_SESSION['setting']['system']['visitor_detection'] == 1 &&
+	$_SESSION['visitor']['type'] == '' &&
+	isset($_COOKIE['visitor_type'])
+	) {
+	$_SESSION['visitor']['type'] = $_COOKIE['visitor_type'];
+}
+
+// unset cookie if detection not enabled
+if ($_SESSION['setting']['system']['visitor_detection'] != 1 && isset($_COOKIE['visitor_type'])) {
+	setcookie("visitor_type", '', time() - 3600);
+	unset($_SESSION['visitor']['type']);
+}
+
+// visitor detection, if enabled
+if (
+	$_SESSION['setting']['system']['visitor_detection'] == 1 &&
+	$_SESSION['visitor']['type'] == '' &&
+	is_file(ROOT.'ima.php') &&
+	$_SERVER['PHP_SELF'] != '/ima.php' &&
+	strpos(strtolower($_SERVER['PHP_SELF']), '/'.$_SESSION['setting']['system']['admin_home'].'/') === 0 &&
+	strpos(strtolower($_SERVER['PHP_SELF']), '/'.$_SESSION['setting']['system']['user_home'].'/') === 0
+	) {
+	header("location: /ima.php");
+	exit;
+}
+
+// hide menu completely if none defined
+if (
+	$page['menu']['left'] == '' &&
+	$page['menu']['right'] == '' &&
+	$page['menu']['right_xs'] == '' &&
+	strpos(strtolower($_SERVER['PHP_SELF']), '/'.$_SESSION['setting']['system']['admin_home'].'/') !== 0 &&
+	strpos(strtolower($_SERVER['PHP_SELF']), '/'.$_SESSION['setting']['system']['user_home'].'/') !== 0 &&
+	strtolower($_SERVER['PHP_SELF']) != '/login.php' &&
+	strtolower($_SERVER['PHP_SELF']) != '/login'
+	) {
+	$menu_exists = false;
+}
+else {
+	$menu_exists = true;
+}
+
+// page actions, if defined in post/get
+$page_actions = $_REQUEST['page'];
+if (is_array($page_actions) && sizeof($page_actions) > 0) {
+	foreach ($page_actions as $page_action => $action_value) {
+		switch ($page_action) {
+			case 'scroll':
+				if ($action_value != '') {
+					if (substr_count($action_value, '|') > 0) {
+						$scroll = explode('|', $action_value);
+					}
+					else {
+						$scroll[] = $action_value;
+					}
+					if (is_array($scroll)) {
+						$_SESSION['action']['scroll']['id'] = $scroll[0];
+						$_SESSION['action']['scroll']['speed'] = is_numeric($scroll[1]) ? $scroll[1] : null;
+						$_SESSION['action']['scroll']['delay'] = is_numeric($scroll[2]) ? $scroll[2] : null;
+					}
+				}
+				break;
+			case 'tab':
+				if ($action_value != '') {
+					$_SESSION['action']['tab'] = $action_value;
+				}
+				break;
+			case 'focus':
+				if ($action_value != '') {
+					if (substr_count($action_value, '|') > 0) {
+						$focus = explode('|', $action_value);
+					}
+					else {
+						$focus[] = $action_value;
+					}
+					if (is_array($focus)) {
+						$_SESSION['action']['focus']['id'] = $focus[0];
+						$_SESSION['action']['focus']['delay'] = is_numeric($focus[2]) ? $focus[2] : null;
+					}
+				}
+				break;
+		}
+	}
+}
+unset($page_actions, $page_action, $action_value, $scroll, $focus);
+
+// inject custom php code
+// if ($_SESSION['setting']['system']['code_custom_php_top'] != '') {
+// 	eval($_SESSION['setting']['system']['code_custom_php_top']);
+// }
+
+?><!DOCTYPE html>
+<html lang='en'>
+	<head>
+		<meta charset='utf-8'>
+		<meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />
+		<meta http-equiv='X-UA-Compatible' content='IE=edge' />
+		<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+		<meta name="HandheldFriendly" content="true" />
+		<meta name='description' content="<?php echo $page['description']; // 160 chars max ?>" />
+
+		<? if ($_SESSION['setting']['theme']['favicon'] != '') { ?>
+			<link rel='icon' type='image/png' href="<?=$_SESSION['setting']['theme']['favicon']?>" />
+		<? } ?>
+
+		<? // highslide image viewer ?>
+		<link rel="stylesheet" type="text/css" href="/res/pkg/highslide/highslide.css" media="screen">
+
+		<?
+		// tablesorter jquery plugin (default style)
+		// <link rel="stylesheet" type="text/css" href="/res/pkg/tablesorter/css/theme.default.min.css" />
+		?>
+
+		<? // bootstrap and plugins ?>
+		<link rel="stylesheet" type="text/css" href="/res/pkg/bootstrap/css/bootstrap.min.css" />
+		<link rel="stylesheet" type="text/css" href="/res/pkg/bootstrap/css/bootstrap-tempusdominus.css" />
+		<link rel="stylesheet" type="text/css" href="/res/pkg/bootstrap/css/bootstrap-colorpicker.min.css" />
+		<link rel="stylesheet" type="text/css" href="/res/pkg/bootstrap/css/bootstrap-colorpicker.custom.css" />
+
+		<? // contentbox - required ?>
+		<link rel="stylesheet" type="text/css" href="/<?=$_SESSION['setting']['system']['admin_home']?>/box/box.css" />
+		<link rel="stylesheet" type="text/css" href="/<?=$_SESSION['setting']['system']['admin_home']?>/assets/minimalist-basic/content.css" />
+
+		<? if ($edit_mode) { ?>
+			<? // contentbuilder and contentbox ?>
+			<link rel="stylesheet" type="text/css" href="/<?=$_SESSION['setting']['system']['admin_home']?>/contentbuilder/contentbuilder.css" />
+			<link rel="stylesheet" type="text/css" href="/<?=$_SESSION['setting']['system']['admin_home']?>/contentbox/contentbox.css" />
+		<? } ?>
+
+		<link rel='stylesheet' type='text/css' href='/res/css/main.php?em=<?=$edit_mode?>&me=<?=$menu_exists?>' />
+		<link rel='stylesheet' type='text/css' href='/res/pkg/fontawesome/css/all.css'>
+		<link rel='stylesheet' type='text/css' href='/res/css/awesome-bootstrap-checkbox.css' />
+		<link rel='stylesheet' type='text/css' href='/res/css/animate.min.css' />
+
+		<title><?php echo (($page['title'] != '') ? $page['title'].' | ' : null).$_SESSION['setting']['system']['site_title'].(($_SESSION['setting']['system']['site_slogan'] != '') ? ' - '.$_SESSION['setting']['system']['site_slogan'] : null); ?></title>
+
+		<script language='JavaScript' type='text/javascript' src='/res/pkg/jquery/jquery-3.4.1.min.js'></script>
+		<? // <script src='https://code.jquery.com/jquery-migrate-3.1.0.js'></script> ?>
+		<? if (!$edit_mode) { ?>
+			<? // jquery paver plugin ?>
+			<script language="JavaScript" type="text/javascript" src="/res/pkg/paver/jquery.ba-throttle-debounce.min.js"></script>
+			<script language="JavaScript" type="text/javascript" src="/res/pkg/paver/jquery.paver.min.js"></script>
+			<link rel='stylesheet' type='text/css' href='/res/pkg/paver/paver.min.css' />
+		<? } ?>
+		<script language='JavaScript' type='text/javascript' src="/res/pkg/tablesorter/js/jquery.tablesorter.min.js"></script>
+		<script language='JavaScript' type='text/javascript' src="/res/pkg/waypoints/jquery.waypoints.min.js"></script>
+
+		<script language='JavaScript' type='text/javascript' src='/res/pkg/bootstrap/js/bootstrap.min.js'></script>
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/bootstrap/js/bootstrap-checkbox.min.js"></script>
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/bootstrap/js/bootstrap-colorpicker.js"></script>
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/momentjs/moment.min.js"></script> <!-- must be loaded before tempusdominus -->
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/bootstrap/js/bootstrap-tempusdominus.min.js"></script>
+
+		<script language="JavaScript" type="text/javascript">window.FontAwesomeConfig = { autoReplaceSvg: false }</script>
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/fontawesome/js/all.js" defer></script>
+
+		<script language='JavaScript' type='text/javascript' src="/res/pkg/lazysizes/lazysizes.min.js" async=""></script>
+
+		<? if (!$edit_mode) { ?>
+			<script language="JavaScript" type="text/javascript" src="/res/pkg/ckeditor/ckeditor.js"></script>
+		<? } ?>
+
+		<script language='JavaScript' type='text/javascript' src='/res/js/getbyid.js'></script>
+		<script language='JavaScript' type='text/javascript' src='/res/js/scrollto.js'></script>
+		<script language='JavaScript' type='text/javascript' src='/res/js/window_open.js'></script>
+		<script language='JavaScript' type='text/javascript' src='/res/js/new_window.js'></script>
+		<script language='JavaScript' type='text/javascript' src='/res/js/filterlsn.js'></script>
+		<script language='JavaScript' type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+
+		<? // highslide image viewer ?>
+		<script language="JavaScript" type="text/javascript" src="/res/pkg/highslide/highslide.js"></script>
+		<script language="JavaScript" type="text/javascript">
+			//<![CDATA[
+			hs.registerOverlay({
+				html: '<div class="closebutton" onclick="return hs.close(this)" title="Close"></div>',
+				position: 'top right',
+				fade: 2 // fading the semi-transparent overlay looks bad in IE
+			});
+			hs.graphicsDir = '/res/pkg/highslide/images/';
+			hs.wrapperClassName = 'borderless';
+			//]]>
+		</script>
+
+		<?php
+		// web font loader
+		/*
+		if ($_SESSION['setting']['theme']['font_loader'] == 'true') {
+			if ($_SESSION['setting']['theme']['font_retrieval'] != 'asynchronous') {
+				$font_loader_version = ($_SESSION['setting']['theme']['font_loader_version'] != '') ? $_SESSION['setting']['theme']['font_loader_version'] : 1;
+				echo "<script language='JavaScript' type='text/javascript' src='//ajax.googleapis.com/ajax/libs/webfont/".$font_loader_version."/webfont.js'></script>\n";
+			}
+			echo "<script language='JavaScript' type='text/javascript' src='/res/fonts/web_font_loader.php?v=".$font_loader_version."'></script>\n";
+		}
+		*/
+		?>
+
+		<script language="JavaScript" type="text/javascript">
+
+/*** begin document ready *******************************************************************************************/
+
+			$(document).ready(function() {
+
+				<?php
+				// define hideUp/showDown plugin
+				echo "(function($) {\n";
+				echo "	$.fn.hideUp = function() {\n";
+				echo "		this.animate({opacity: 'hide', height: 'hide'}, 400);\n";
+				echo "		return this;\n";
+				echo "	};\n";
+				echo "$	.fn.showDown = function() {\n";
+				echo "		this.animate({opacity: 'show', height: 'show'}, 400);\n";
+				echo "		return this;\n";
+				echo "	};\n";
+				echo "}(jQuery));\n";
+
+				// set response message, if any
+				if (strlen($_SESSION['message']) > 0) {
+					$message_text = addslashes($_SESSION['message']);
+					$message_mood = $_SESSION['message_mood'];
+					$message_delay = $_SESSION['message_delay'];
+
+					echo "display_message('".$message_text."'";
+					echo ($message_mood != '') ? ", '".$message_mood."'" : ", 'default'";
+					if ($message_delay != '') {
+						echo ", '".$message_delay."'";
+					}
+					echo "); ";
+					unset($_SESSION['message_delay']);
+					// message and mode are cleared in footer (so can be used on page, if desired)
+				}
+				?>
+
+				// hide message bar on hover
+				$("#message_text").on('mouseover',function(){ $(this).hide(); $("#message_container").hide(); });
+
+				<?php
+				if (
+					$_SESSION['setting']['theme']['menu_brand_image'] != '' &&
+					$_SESSION['setting']['theme']['menu_brand_image_hover'] != ''
+					) {
+					?>
+					// crossfade menu brand images (if hover version set)
+					$(function(){
+						$('#menu_brand_image').on('mouseover',function(){
+							$(this).fadeOut('fast', function(){
+								$('#menu_brand_image_hover').fadeIn('fast');
+							});
+						});
+						$('#menu_brand_image_hover').mouseout(function(){
+							$(this).fadeOut('fast', function(){
+								$('#menu_brand_image').fadeIn('fast');
+							});
+						});
+					});
+					<?php
+				}
+				?>
+
+				// apply bootstrap tempusdominus (calendar/datetime picker) plugin
+				$(function() {
+					//set defaults
+						$.fn.datetimepicker.Constructor.Default = $.extend({}, $.fn.datetimepicker.Constructor.Default, {
+							buttons: {
+								showToday: true,
+								showClear: true,
+								showClose: true,
+							},
+							icons: {
+								time: 'fas fa-clock',
+								date: 'fas fa-calendar-alt',
+								up: 'fas fa-arrow-up',
+								down: 'fas fa-arrow-down',
+								previous: 'fas fa-chevron-left',
+								next: 'fas fa-chevron-right',
+								today: 'fas fa-calendar-check',
+								clear: 'fas fa-trash',
+								close: 'fas fa-times',
+							}
+						});
+
+					// define formatting of individual classes
+						$('.datepicker').datetimepicker({ 			format: 'MM-DD-YYYY', showTodayButton: true, showClear: true, showClose: true, });
+						$('.timepicker').datetimepicker({ 			format: 'h:mm A', showTodayButton: false, showClear: true, showClose: true, });
+						$('.datetimepicker').datetimepicker({ 		format: 'MM-DD-YYYY h:mm A', showTodayButton: true, showClear: true, showClose: true, });
+						$('.datetimesecpicker').datetimepicker({ 	format: 'MM-DD-YYYY HH:mm:ss', showTodayButton: true, showClear: true, showClose: true, });
+				});
+
+				// apply bootstrap-checkbox plugin
+				$('input:checkbox.slider').checkboxpicker();
+
+				// apply bootstrap-colorpicker plugin
+				$(function(){ colorpicker(); });
+
+				// apply ckeditor rich text editor for blog post editor
+				<?php
+				if (
+					!$edit_mode &&
+					$_SESSION['setting']['system']['blog_enabled'] == 1 &&
+					check_perm('blog') &&
+					(
+						check_perm('blog_post_add') ||
+						check_perm('blog_post_edit')
+					)
+					) {
+					?>
+					if (document.getElementById('rich-text-editor')) {
+						/* fixed toolbar */
+						// CKEDITOR.replace('rich-text-editor', { customConfig: '/res/pkg/ckeditor/config.php' });
+						/* floating toolbar */
+						CKEDITOR.inline('rich-text-editor', { customConfig: '/res/pkg/ckeditor/config.php' });
+					}
+					<?php
+				}
+				?>
+
+				// link table rows (eg. "<table><tr class='table_row_link' data-href='url.php' data-target='new'><td>linked</td><td class='void_table_row_link'>not linked</td></tr></table>")
+				$('tr.table_row_link').each(function(i,e) {
+					$(e).children('td:not(.void_table_row_link)').on('click',function(){
+						var href = $(this).closest('tr').data('href');
+						var target = $(this).closest('tr').data('target');
+						if (href) {
+							if ($('#search').val() !== undefined && $('#search').val() != '') {
+								href += '&search='+$('#search').val();
+							}
+							if (target == 'new') {
+								window.open(href);
+							}
+							else {
+								window.location = href;
+							}
+						}
+					});
+				});
+
+				// enables table heading sorter jquery plugin
+				$(function(){
+					$('table.tablesorter').tablesorter();
+				});
+
+				<?php if (!MOBILE) { ?>
+					// load youtube iframe api, if background video present
+					if ($('#youtube-background-player').length) {
+						<?php if (!$edit_mode) { echo "$('#youtube-background-thumbnail').hide();\n"; } ?>
+						var tag = document.createElement('script');
+						tag.src = "<?php echo (($_SERVER['HTTPS'] != 'off') ? 'https' : 'http'); ?>://www.youtube.com/iframe_api";
+						var firstScriptTag = document.getElementsByTagName('script')[0];
+						firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+						// automatically calls the onYouTubeIframeAPIReady() function below when ready
+					}
+				<?php } else { ?>
+					// hide youtube background video
+					if ($('#youtube-background-player').length) {
+						$('#youtube-background-player').hide();
+					}
+				<?php } ?>
+
+				// format form phone numbers on field change
+				$('.phone').on('input', function() {
+					var number = $(this).val().replace(/[^\d]/g, '');
+					number = number.replace(/(\d{3})/, "$1");
+					number = number.replace(/(\d{3})(\d{1,3})/, "$1-$2");
+					number = number.replace(/(\d{3})\-(\d{3})(\d{1,4}).*/, "$1-$2-$3");
+					$(this).val(number);
+				});
+
+				// format form postal code on field change
+				$('.postal_code').on('input', function() {
+					var number = $(this).val().replace(/[^\d]/g, '');
+					number = number.replace(/(\d{5})/, "$1");
+					number = number.replace(/(\d{5})(\d{1,4}).*/, "$1-$2");
+					$(this).val(number);
+				});
+
+				// number only
+				$('.number').on('input', function() {
+					var number = $(this).val().replace(/[^\d]/g, '');
+					$(this).val(number);
+				});
+
+				// decimal only
+				$('.decimal').on('input', function() {
+					var decimal = $(this).val().replace(/[^0-9.]/g, '');
+					$(this).val(decimal);
+				});
+
+				<?php if (!$edit_mode) { ?>
+					// jquery paver panorama plugin
+					$(function() {
+						$('div.panorama').paver({
+							tiltSensitivity: 0.5,
+							tiltThresholdPortrait: 24,
+							tiltThresholdLandscape: 24
+						});
+					});
+				<?php } ?>
+
+			});
+
+/*** end document ready **************************************************************************************/
+
+			<?php if (!MOBILE) { ?>
+				// mutes background youtube video (if present) when called by the iframe api
+				var player;
+				function onYouTubeIframeAPIReady() {
+					player = new YT.Player('youtube-background-player', {
+						events: { 'onReady': onPlayerReady }
+					});
+				}
+				function onPlayerReady(event) {
+					<?php
+					if ($_SESSION['setting']['theme']['body_background_youtube_mute']) {
+						echo "event.target.mute();\n";
+					}
+					if (
+						$_SESSION['setting']['theme']['body_background_youtube_quality'] != '' &&
+						$_SESSION['setting']['theme']['body_background_youtube_quality'] != 'auto'
+						) {
+						echo "event.target.pauseVideo();\n";
+						echo "event.target.setPlaybackQuality('".$_SESSION['setting']['theme']['body_background_youtube_quality']."');\n";
+						echo "event.target.playVideo();\n";
+					}
+					?>
+				}
+			<?php } ?>
+
+			// define function to initialize color picker (done above and manually elsewhere)
+			function colorpicker(initial_color) {
+				$('.colorpicker').colorpicker({
+					align: 'left',
+					fallbackColor: '',
+					customClass: 'colorpicker-2x',
+					sliders: {
+						saturation: {
+							maxLeft: 200,
+							maxTop: 200
+						},
+						hue: {
+							maxTop: 200
+						},
+						alpha: {
+							maxTop: 200
+						}
+					}
+				});
+			}
+
+			// youtube (light) embeds (source: http://labnol.org/?p=27941)
+			document.addEventListener("DOMContentLoaded",
+				function() {
+					var div, n, v = document.getElementsByClassName("youtube-player");
+					for (n = 0; n < v.length; n++) {
+						div = document.createElement("div");
+						div.setAttribute("data-id", v[n].dataset.id);
+						div.innerHTML = labnol_thumb(v[n].dataset.id);
+						div.onclick = labnol_iframe;
+						v[n].appendChild(div);
+					}
+				});
+
+			function labnol_thumb(id) {
+				var thumb = '<img src="//i.ytimg.com/vi/ID/maxresdefault.jpg">', play = '<div class="play"></div>';
+				return thumb.replace("ID", id) + play;
+			}
+
+			function labnol_iframe() {
+				var iframe = document.createElement("iframe");
+				var embed = "https://www.youtube.com/embed/ID?autoplay=1&rel=0";
+				iframe.setAttribute("src", embed.replace("ID", this.dataset.id));
+				iframe.setAttribute("frameborder", "0");
+				iframe.setAttribute("allowfullscreen", "1");
+				this.parentNode.replaceChild(iframe, this);
+			}
+
+			// display notification/message bar
+			function display_message(msg, mood, delay) {
+				var mood = (typeof mood !== 'undefined') ? mood : 'default';
+				var delay = (typeof delay !== 'undefined') ? delay : <?php echo (1000 * (float) $_SESSION['theme']['message_delay']['text']); ?>;
+				if (msg != '') {
+					var inner_width = $(window).width();
+					// add class by mood
+					$("#message_container").addClass('message_container_mood_'+mood);
+					$("#message_text").addClass('message_text_mood_'+mood);
+					// output message
+					$("#message_text").html(msg);
+					$("#message_container").css({height: $("#message_text").css("height")});
+					$("#message_container").css({width: inner_width});
+					$("#message_text").show().animate({top: '+=80'}, 500).animate({opacity: 1}, 'fast').delay(delay).animate({top: '-=80'}, 1000).animate({opacity: 0});
+					$("#message_container").show().animate({top: '+=80'}, 500).animate({opacity: <?php echo $_SESSION['setting']['theme']['message_opacity']; ?>}, "fast").delay(delay).animate({top: '-=80'}, 1000).animate({opacity: 0}, function() {
+						$("#message_container").removeClass('message_container_mood_'+mood);
+					});
+				}
+			}
+
+			// wrap inputs in form tags, hide and submit
+			function form_submit(form_identifier, action, method, target) {
+				action = (action == null) ? '/form_email.php' : action;
+				method = (method == '' || method == null) ? 'post' : method;
+				target = (target == '' || target == null) ? '_self' : target;
+				$("div." + form_identifier).parent().wrapAll("<div id='" + form_identifier + "_container' />");
+				$("div#" + form_identifier + "_container").fadeTo('slow', 0, function() {
+					$("div#" + form_identifier + "_container").slideUp(function() {
+						$("<input type='hidden' name='form_id' value='" + form_identifier + "' />").prependTo($("div#" + form_identifier + "_container"));
+						$("div#" + form_identifier + "_container").wrap("<form id='" + form_identifier + "' action='" + action + "' method='" + method + "' target='" + target + "' />");
+						$('form#' + form_identifier).submit();
+					});
+				});
+			}
+
+			// reset form
+			function form_reset(form_identifier) {
+				$("*[name^='fields']").each(function(index) {
+					$(this).val('');
+					if ($(this).prop('checked')) {
+						$(this).prop('checked', false);
+					}
+				});
+			}
+
+		</script>
+
+		<?php
+		// inject custom js code
+		if ($_SESSION['setting']['system']['code_custom_js_head'] != '') {
+			echo "<script language='JavaScript' type='text/javascript'>\n\n";
+			echo $_SESSION['setting']['system']['code_custom_js_head'];
+			echo "</script>\n\n";
+		}
+
+		// inject custom js code by page_publish.php
+		echo $custom_js_code_head;
+		?>
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({
+          google_ad_client: "ca-pub-8891303795668056",
+          enable_page_level_ads: true
+     });
+</script>
+	</head>
+
+	<?php
+	$onload = ($onload != '') ? "onload=\"".$onload."\"" : null;
+	$onunload = ($onunload != '') ? "onunload=\"".$onunload."\"" : null;
+	$onbeforeunload = ($onbeforeunload != '') ? "onbeforeunload=\"".$onbeforeunload."\"" : null;
+	echo "<body id='page_top' ".$onload." ".$onunload." ".$onbeforeunload.">\n";
+
+		// inject custom js code
+		echo "<script language='JavaScript' type='text/javascript'>\n\n";
+		echo $_SESSION['setting']['system']['code_custom_js_top'];
+		echo "</script>\n\n";
+		?>
+
+		<iframe name='hidden_iframe' id='hidden_iframe' src='' style='display: none;'></iframe>
+
+		<div id='message_container' class='message_container_mood_default'></div>
+		<div id='message_text' class='message_container_text_default'></div>
+
+		<?php
+		if ($menu_exists) {
+
+			// load menus into session vars, if necessary
+			if (!is_array($_SESSION['menu']['left'][$_SERVER['PHP_SELF']])) { $_SESSION['menu']['left'][$_SERVER['PHP_SELF']] = load_menu($page['menu']['left']); }
+			if (!is_array($_SESSION['menu']['right'][$_SERVER['PHP_SELF']])) { $_SESSION['menu']['right'][$_SERVER['PHP_SELF']] = load_menu($page['menu']['right']); }
+			if (!is_array($_SESSION['menu']['right_xs'][$_SERVER['PHP_SELF']])) { $_SESSION['menu']['right_xs'][$_SERVER['PHP_SELF']] = load_menu($page['menu']['right_xs']); }
+
+			$menu_position = ($_SESSION['setting']['theme']['menu_position'] != '') ? $_SESSION['setting']['theme']['menu_position'] : 'top';
+			?>
+			<nav class='navbar navbar-expand-sm fixed-<?=$menu_position?>'>
+				<div class="container-fluid" <?=(!$_SESSION['auth'] && $_SESSION['setting']['theme']['menu_width'] != '' ? "style='max-width: ".$_SESSION['setting']['theme']['menu_width']."'" : null);?>>
+					<?php
+					echo "<div class='navbar-brand pl-1 pl-sm-0'>\n";
+
+					// define menu brand link & mark
+					/*
+					if ($_SESSION['auth']) {
+						$menu_brand_link = '/'.$_SESSION['setting']['system']['user_home'];
+					}
+					else {
+						$menu_brand_link = ($_SESSION['setting']['theme']['menu_brand_link'] != '') ? $_SESSION['setting']['theme']['menu_brand_link'] : '/';
+					}
+					*/
+					$menu_brand_link = ($_SESSION['setting']['theme']['menu_brand_link'] != '') ? $_SESSION['setting']['theme']['menu_brand_link'] : '/';
+					$menu_brand_text = ($_SESSION['setting']['theme']['menu_brand_text'] != '') ? $_SESSION['setting']['theme']['menu_brand_text'] : "&infin;";
+					// output menu brand
+					if ($_SESSION['setting']['theme']['menu_brand_type'] == 'image') {
+						echo "<a href='".$menu_brand_link."'>";
+						if ($_SESSION['setting']['theme']['menu_brand_image'] != '') {
+							echo "<img id='menu_brand_image' class='navbar-logo' style='margin-right: -2%;' src='".$_SESSION['setting']['theme']['menu_brand_image']."' alt=\"".$menu_brand_text."\">";
+						}
+						if ($_SESSION['setting']['theme']['menu_brand_image_hover'] != '') {
+							echo "<img id='menu_brand_image_hover' class='navbar-logo' style='".(($_SESSION['setting']['theme']['menu_brand_image'] != '') ? 'display: none;' : 'margin-right: -2%;')."' src='".$_SESSION['setting']['theme']['menu_brand_image_hover']."' alt=\"".$menu_brand_text."\">";
+						}
+						echo "</a>";
+					}
+					else if ($_SESSION['setting']['theme']['menu_brand_type'] == 'text') {
+						echo "<a id='menu_brand_text' class='navbar-brand' href=\"".$menu_brand_link."\">".$menu_brand_text."</a>\n";
+					}
+
+					echo "</div>\n";
+					echo "<button type='button' class='navbar-toggler p-3 mr-1' data-toggle='collapse' data-target='#main_navbar' aria-expanded='false' aria-controls='main_navbar' aria-label='Toggle Menu'>\n";
+					echo "	<span class='fas fa-bars'></span>\n";
+					echo "</button>\n";
+
+					/*
+					// menu, right - xs: visible, sm+: hidden
+					echo "<span class='pull-right visible-xs'>\n";
+					if (is_array($_SESSION['menu']['right_xs'][$_SERVER['PHP_SELF']]) && sizeof($_SESSION['menu']['right_xs'][$_SERVER['PHP_SELF']]) > 0) {
+						foreach ($_SESSION['menu']['right_xs'][$_SERVER['PHP_SELF']] as $h_menu_item) {
+							if (
+								$h_menu_item['enabled'] == 1 &&
+								(
+									(MOBILE && ($h_menu_item['device'] == 'M' || $h_menu_item['device'] == '')) ||
+									(!MOBILE && ($h_menu_item['device'] == 'D' || $h_menu_item['device'] == ''))
+								) &&
+								(
+									$h_menu_item['permission_uuid'] == '' ||
+									(
+										$h_menu_item['permission_uuid'] != '' &&
+										check_perm($h_menu_item['permission_uuid'])
+									)
+								) &&
+								(
+									$h_menu_item['visibility'] == '' ||
+									(
+										$h_menu_item['visibility'] == 'P' &&
+										$_SESSION['auth'] != true
+									) ||
+									(
+										$h_menu_item['visibility'] == 'U' &&
+										$_SESSION['auth'] == true
+									)
+								)
+								) {
+								// handle menu item icon / title
+								$menu_right_xs_icon = ($h_menu_item['icon'] != '' && substr_count($h_menu_item['icon'], 'fa-') > 0) ? "<span class='fas ".$h_menu_item['icon']."' style='top: 2px;' title=\"".$h_menu_item['title']."\"></span>" : null;
+								if (!$h_menu_item['icon_only']) {
+									$menu_right_xs_item = ($menu_right_xs_icon != '') ? "<span class='hidden-sm' style='margin-left: 5px; line-height: 1;'>".$h_menu_item['title']."</span>" : $h_menu_item['title'];
+								}
+								else {
+									unset($menu_right_xs_item);
+								}
+								echo "<a href='".$h_menu_item['url']."' ".($h_menu_item['onclick'] != '' ? "onclick=\"".$h_menu_item['onclick']."\"" : null)." class='xs_link ".($page['menu']['active_name'] == $h_menu_item['name'] ? 'active' : null)."'>".$menu_right_xs_icon.$menu_right_xs_item."</a>";
+							}
+						}
+					}
+
+					// visitor detection switch, if enabled
+					if ($_SESSION['setting']['system']['visitor_detection'] == 1) {
+						echo "<a href='/ima.php' class='xs_link' target='_top' title='Who are you?'>I'm a...</a>\n";
+					}
+
+					// account controls
+					if ($_SESSION['auth']) {
+						if (
+							$_SESSION['setting']['system']['login_public'] &&
+							$_SESSION['setting']['system']['user_home'] != '' &&
+							is_dir(ROOT.$_SESSION['setting']['system']['user_home'])
+							) {
+							// logout
+							echo "<a href='/logout.php' class='xs_link logout_icon' title='Logout'><span class='fas fa-log-out'></span></a>";
+						}
+					}
+					if (
+						!$_SESSION['auth'] &&
+						$_SESSION['setting']['system']['login_public'] &&
+						strtolower($_SERVER['PHP_SELF']) != '/login.php' &&
+						strtolower($_SERVER['PHP_SELF']) != '/login'
+						) {
+						// login (xs)
+						echo "<a href='#' class='xs_link login_icon' onclick='this.blur(); show_login();' title='Login'>Login&nbsp;&nbsp;<span class='fas fa-lock'></span></a>";
+					}
+					echo "</span>\n";
+					*/
+					?>
+
+					<div class='collapse navbar-collapse' id='main_navbar'>
+						<?php
+						// menu, left - xs: collapsed, sm+: visible
+						if (is_array($_SESSION['menu']['left'][$_SERVER['PHP_SELF']]) && sizeof($_SESSION['menu']['left'][$_SERVER['PHP_SELF']]) > 0) {
+							echo "<ul class='navbar-nav'>\n";
+// 							display_menu($_SESSION['menu']['left'][$_SERVER['PHP_SELF']], $page['menu']['active_name']);
+							display_menu(load_menu($page['menu']['left']), $page['menu']['active_name']);
+							echo "</ul>\n";
+						}
+
+						// menu, right - xs: hidden, sm+: visible
+						echo "<ul class='navbar-nav ml-auto'>\n";
+						if (is_array($_SESSION['menu']['right'][$_SERVER['PHP_SELF']]) && sizeof($_SESSION['menu']['right'][$_SERVER['PHP_SELF']]) > 0) {
+// 							display_menu($_SESSION['menu']['right'][$_SERVER['PHP_SELF']], $page['menu']['active_name']);
+							display_menu(load_menu($page['menu']['right']), $page['menu']['active_name']);
+						}
+
+
+						// visitor detection switch, if enabled
+						if ($_SESSION['setting']['system']['visitor_detection'] == 1) {
+							echo "<li class='nav-item'><a class='nav-link' href='/ima.php' target='_top' title='Who are you?'>I'm a...</a></li>\n";
+						}
+
+						// account controls
+						if ($_SESSION['auth']) {
+							// admin menu
+							if ($_SESSION['user']['admin']) {
+								echo "<li class='nav-item dropdown'>\n";
+								echo "	<a class='nav-link' href='#' data-toggle='dropdown' ".($edit_mode ? "onmouseover='close_snippet_pane();'" : null)."><span class='fas fa-crown' title='Admin'></span></a>\n";
+								echo "	<ul class='dropdown-menu dropdown-menu-right'>\n";
+								if (
+									!$edit_mode &&
+									is_uuid($page['page_uuid']) &&
+									check_perm('page_edit')
+									) {
+									// check if blog post, lookup page uuid, if any
+									if ($_SERVER['PHP_SELF'] == '/blog/view.php' && is_uuid($_GET['id'])) {
+										$p_sql = "select page_uuid from ".DB_PREFIX."blog_posts where blog_post_uuid = :blog_post_uuid";
+										$p_bind[':blog_post_uuid'] = $_GET['id'];
+										$p_row = db_query($db, $p_sql, $p_bind, 'single');
+										if (is_uuid($p_row['page_uuid'])) {
+											$edit_url = "/".$_SESSION['setting']['system']['admin_home']."/page_edit.php?uuid=".$p_row['page_uuid'];
+										}
+										else {
+											$edit_url = "/".$_SESSION['setting']['system']['admin_home']."/blog_post_edit.php?uuid=".$_GET['id'];
+										}
+										unset($p_sql, $p_bind, $p_row);
+									}
+									else {
+										$edit_url = "/".$_SESSION['setting']['system']['admin_home']."/page_edit.php?uuid=".$page['page_uuid'];
+									}
+									echo "	<li class='nav-item'><a class='nav-link' href='".$edit_url."' target='_top'><span class='fas fa-pencil-alt fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Edit</a></li>\n";
+								}
+								echo "		<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/index.php' target='_top'><span class='fas fa-home fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Home</a></li>\n";
+								if (check_perm('pages')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/pages.php' target='_top'><span class='fas fa-file fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Pages</a></li>\n"; }
+								if (check_perm('assets')) { echo "<li class='nav-item'><a class='nav-link' href='javascript:void(0);' onclick=\"new_window('/res/pkg/fileman/index.php?integration=custom&type=files','assets', 80, 70);\"><span class='fas fa-photo-video fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Assets</a></li>\n"; }
+								if (check_perm('menus')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/menus.php' target='_top'><span class='fas fa-list-alt fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Menus</a></li>\n"; }
+								if (
+									check_perm('forum') &&
+									$_SESSION['setting']['system']['forum_enabled'] == 1 &&
+									is_dir(ROOT.$_SESSION['setting']['system']['forum_home'])
+									) {
+									echo "	<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/forum.php' target='_top'><span class='fas fa-comment fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Forum</a></li>\n";
+								}
+								//if (check_perm('locations')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/locations' target='_top'><span class='fas fa-map-marker-alt fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Locations</a></li>\n"; }
+								if (check_perm('schools')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/schools' target='_top'><span class='fas fa-school fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Schools</a></li>\n"; }
+								if (check_perm('users')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/users' target='_top'><span class='fas fa-user fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Users</a></li>\n"; }
+								if (check_perm('email')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/email' target='_top'><span class='fas fa-envelope fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Email</a></li>\n"; }
+								if (check_perm('contacts')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/contacts' target='_top'><span class='fas fa-address-book fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Contacts</a></li>\n"; }
+								if (check_perm('settings')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/settings' target='_top'><span class='fas fa-cog fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Settings</a></li>\n"; }
+								if (check_perm('groups')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/groups' target='_top'><span class='fas fa-th-large fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Groups</a></li>\n"; }
+								if (check_perm('snippets')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/snippets' target='_top'><span class='fas fa-cut fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Snippets</a></li>\n"; }
+								if (check_perm('permissions')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/permissions' target='_top'><span class='fas fa-th-list fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Permissions</a></li>\n"; }
+								if (check_perm('crons')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/crons' target='_top'><span class='fas fa-clock fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Tasks</a></li>\n"; }
+								if (check_perm('session')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/session' target='_top'><span class='fas fa-info-circle fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Session</a></li>\n"; }
+								if (check_perm('update')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/update' target='_top'><span class='fas fa-sync-alt fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Update</a></li>\n"; }
+								if (check_perm('backup_database') || check_perm('backup_files')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/backup' target='_top'><span class='fas fa-hdd fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Backup</a></li>\n"; }
+								if (check_perm('errors')) { echo "<li class='nav-item'><a class='nav-link' href='/".$_SESSION['setting']['system']['admin_home']."/errors' target='_top'><span class='fas fa-exclamation-triangle fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Errors</a></li>\n"; }
+								echo "		<li class='nav-item'><a class='nav-link' href='/logout.php' target='_top'><span class='fas fa-sign-out-alt fa-fw' style='margin-left: 0; margin-right: 10px;'></span>Logout</a></li>\n";
+								echo "	</ul>\n";
+								echo "</li>\n";
+							}
+							else {
+								if ($_SESSION['setting']['system']['login_public']) {
+									// logout
+									echo "<li class='nav-item'><a class='nav-link _logout_icon' href='/logout.php' title='Logout'><span class='fas fa-sign-out-alt'></span></a></li>\n";
+								}
+							}
+						}
+						if (
+							!$_SESSION['auth'] &&
+							$_SESSION['setting']['system']['login_public'] &&
+							strtolower($_SERVER['PHP_SELF']) != '/login.php' &&
+							strtolower($_SERVER['PHP_SELF']) != '/login'
+							) {
+							// login
+							echo "<li class='nav-item'><a class='nav-link _login_icon' href='#' onclick='this.blur(); show_login();' title='Login'>Login!&nbsp;&nbsp;<span class='fas fa-lock'></span></a></li>";
+						}
+
+						echo "</ul>\n";
+						/*
+						// menu, right - xs: collapsed, sm+: hidden
+						if (is_array($_SESSION['menu']['right'][$_SERVER['PHP_SELF']]) && sizeof($_SESSION['menu']['right'][$_SERVER['PHP_SELF']]) > 0) {
+							echo "<ul class='nav navbar-nav visible-xs'>\n";
+							display_menu($_SESSION['menu']['right'][$_SERVER['PHP_SELF']], $page['menu']['active_name'], null, 'text-right');
+							echo "</ul>\n";
+						}
+						*/
+						?>
+					</div>
+				</div>
+			</nav>
+
+			<?
+		}
+
+		if (!$edit_mode) {
+			if (is_uuid($page['page_uuid'])) {
+				// wrapper for editable pages
+				echo "<div class='is-wrapper'>\n";
+			}
+			else if ($menu_exists) {
+				// pad non-editable pages
+				if ($_SESSION['setting']['theme']['menu_position'] == 'bottom') {
+					$non_editable_margin = "padding-top: 15px; padding-bottom: 55px;";
+				}
+				else {
+					$non_editable_margin = "padding-top: 65px;";
+				}
+				echo "<div id='body' class='container-fluid' style='".$non_editable_margin." width: 100%;'>";
+			}
+		}
+
+		// include header if menu present and not in admin home folder
+		if ($menu_exists && strpos($_SERVER['PHP_SELF'], '/'.$_SESSION['setting']['system']['admin_home'].'/') === false) {
+			if ($_SESSION['auth'] && is_file(ROOT.$_SESSION['setting']['system']['user_home'].'/header.php')) { // logged in and user header file exists
+				$header = 'user';
+			}
+			else if (strpos($_SERVER['PHP_SELF'], '/login.php') === false && strpos($_SERVER['PHP_SELF'], '/login') === false) { // not at login page
+				if (
+					$_SESSION['setting']['system']['visitor_detection'] == 1 && // visitor detection enabled
+					$_SESSION['visitor']['type'] != '' && // visitor type is set
+					is_file(ROOT.'header_'.$_SESSION['visitor']['type'].'.php') // visitor header exists
+					) {
+					$header = 'visitor';
+				}
+				else if (is_file(ROOT.'header.php')) { // standard header exists
+					$header = 'default';
+				}
+			}
+
+			if (
+				(
+					$_SESSION['setting']['theme']['header_visible_home'] == 1 &&
+					(
+						strtolower($_SERVER['PHP_SELF']) == '/index.php' ||
+						strtolower($_SERVER['PHP_SELF']) == '/home.php'
+					)
+				) ||
+				(
+					strtolower($_SERVER['PHP_SELF']) != '/index.php' &&
+					strtolower($_SERVER['PHP_SELF']) != '/home.php'
+				)
+				) {
+				switch ($header) { // determine header file to include, if any
+					case 'user': include_once ROOT.$_SESSION['setting']['system']['user_home'].'/header.php'; break;
+					case 'visitor': include_once ROOT.'header_'.$_SESSION['visitor']['type'].'.php'; break;
+					case 'default': include_once ROOT.'header.php'; break;
+				}
+			}
+		}
+
+?>
